@@ -54,7 +54,7 @@ void Layer::computeZVals(arma::mat weight, arma::vec bias, arma::mat a_vals){
     */
     assert(weight.n_rows == z_vals.n_rows);
     assert(weight.n_cols == a_vals.n_rows);
-    assert(bias.n_rows == a_vals.n_rows);
+    assert(bias.n_rows == weight.n_rows);
 
     this->z_vals = weight * a_vals;
     this->z_vals.each_col() += bias;
@@ -65,18 +65,18 @@ Network::Network(int layer_count, int* neuron_counts, int* neuron_types):weights
     this->layer_count = layer_count;
     this->neuron_counts = neuron_counts;
 
-    layers = new Layer[layer_count];
+    layers = new Layer*[layer_count];
 
     for (int i = 0; i < layer_count; ++i){
         switch(neuron_types[i]){
             case 0:
-                layers[i] = SigmoidLayer(neuron_counts[i]);
+                layers[i] = new SigmoidLayer(neuron_counts[i]);
                 break;
             case 1:
-                layers[i] = LReluLayer(neuron_counts[i]);
+                layers[i] = new LReluLayer(neuron_counts[i]);
                 break;
             case 2:
-                layers[i] = ReluLayer(neuron_counts[i]);
+                layers[i] = new ReluLayer(neuron_counts[i]);
                 break;
             default:
                 throw std::string("Unidentified activation function!");
@@ -114,20 +114,25 @@ Network::Network(int layer_count, int* neuron_counts, int* neuron_types):weights
 }
 
 void Network::forwardPropagate(double* input_vals){
-    layers[0].setValues(input_vals);
+    layers[0]->setValues(input_vals);
     for (int i = 1; i < layer_count; i++){
-        layers[i].computeZVals(weights(i), biases(i), layers[i-1].getA());
+        layers[i]->computeZVals(weights(i), biases(i), layers[i-1]->getA());
+        layers[i]->activate();
     }
 }
 
 void Network::showActiveValues(){
     for (int i = 0; i < layer_count; i++){
         std::cout << "Layer " << i << ":" << std::endl;
-        layers[i].showActiveValues();
+        layers[i]->showActiveValues();
     }
 }
 
 Network::~Network(){
+    for (int i = 0; i < layer_count; ++i)
+    {
+        delete layers[i];
+    }
     delete[] layers;
 
 /*

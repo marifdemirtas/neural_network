@@ -41,24 +41,27 @@ class Layer //abstract base class for layers of different activations
 class SigmoidLayer : public Layer
 {
     public:
+        SigmoidLayer(int count):Layer(count){};
         void activate();
 };
 
 class ReluLayer : public Layer
 {
     public:
+        ReluLayer(int count):Layer(count){};
         void activate();
 };
 
 class LReluLayer : public Layer
 {
     public:
+        LReluLayer(int count):Layer(count){};
         void activate();
 };
 
 class Network
 {
-    Layer* layers;
+    Layer** layers;
     int layer_count;
     int* neuron_counts;
     arma::field<arma::mat> weights;
