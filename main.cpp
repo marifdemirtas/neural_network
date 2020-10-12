@@ -37,15 +37,20 @@ int main(int argc, char const *argv[]){
     int test_cases;
     inputs >> test_cases;
 
-
-    int input_count = 0;
+//    int input_count = 0;
 //    double x_values[neuron_counts[0]];
     arma::mat x_values(neuron_counts[0], test_cases, arma::fill::zeros);
 
+    if (!x_values.load(argv[2])){
+        throw std::logic_error("Invalid values");
+    };
+    arma::inplace_trans(x_values);
 
+/*
     for (int i = 0; i < neuron_counts[0]*test_cases; ++i){
         inputs >> x_values(i);
     }
+*/
 /*  
     while(inputs >> x_values[input_count++]);
     input_count--;
