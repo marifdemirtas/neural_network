@@ -1,6 +1,6 @@
 make
 
-./main tests/input6.txt tests/set6.txt
+./main tests/input6.txt tests/set6.txt (output_directory)
 
 First argument is the settings for neural networks.
     First line contains one integer indicating number of layers (including input layer).
@@ -12,3 +12,10 @@ First argument is the settings for neural networks.
 
 Second argument is the x values of examples.
     Each row contains one example, each column corresponds to a feature.
+
+Third argument is optional, is a directory name. If given, following is saved.
+    output.txt - The activation values of last layer
+    weights.txt - Binary file for weights
+    weight-i.txt - Human readable file for each weight
+    biases.txt - Binary file for biases
+    bias-i.txt - Human readable file for each bias

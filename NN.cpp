@@ -5,6 +5,7 @@ Student ID : 150180001
 
 #include <iostream>
 #include <armadillo>
+#include <string>
 #include <cassert>
 #include "NN.h"
 
@@ -42,22 +43,13 @@ void Layer::setValues(arma::mat z_vals)
     this->a_vals = this->z_vals;
 }
 
-void Layer::showActiveValues(){
-//    for(int i = 0; i < neuron_count; i++){
-//        std::cout << neurons[i].getA() << std::endl;
-//    }
+void Layer::showActiveValues()
+{
     std::cout << a_vals << std::endl;    
 }
 
-void Layer::computeZVals(arma::mat weight, arma::vec bias, arma::mat a_vals){
-    /*
-    DOUBLE* TORETURN = NEW DOUBLE[NEXT_LAYER_SIZE]{0}
-    FROM 1 TO NEXT_LAYER_SIZE
-        FROM 1 TO THIS_LAYER_SIZE
-            TORETURN[i] += WEIGHT[i][j] * THIS[j]
-        TORETURN[i] += BIAS[i]
-    RETURN TORETURN
-    */
+void Layer::computeZVals(arma::mat weight, arma::vec bias, arma::mat a_vals)
+{
     assert(weight.n_rows == z_vals.n_rows);
     assert(weight.n_cols == a_vals.n_rows);
     assert(bias.n_rows == weight.n_rows);
@@ -93,30 +85,7 @@ Network::Network(int layer_count, int* neuron_counts, int* neuron_types):weights
         biases(i).fill(0.1);
     }
 
-/*
-    weights = new double**[layer_count - 1]; //Array of 2D arrays
-                                             //weights[i] is the weight matrix associated with the transition from layer i to i+1 
-    for (int i = 0; i < layer_count - 1; i++){
-        weights[i] = new double*[neuron_counts[i + 1]]; //weights[i] has row count equal to the number of neurons in the layer i+i
-                                                        //since in the matrix multiplication Z_i+1 = W_i * A_i, result should be in shape 1 x COLUMN_i+1
-        for (int j = 0; j < neuron_counts[i + 1]; j++){
-            weights[i][j] = new double[neuron_counts[i]]; //weights[i][j] is the row vector with which neurons of layer i are multiplied to obtain a neuron in layer i+1
-            for (int k = 0; k < neuron_counts[i]; ++k){
-                weights[i][j][k] = 0.1;                                     //SET INITIAL WEIGHT TO 0.1
-            }
-        }
-    }
-*/
 
-/*
-    biases = new double*[layer_count - 1]; //Array of arrays, biases[i] is the biases for transition from layer i to i+1
-    for (int i = 0; i < layer_count - 1; i++){
-        biases[i] = new double[neuron_counts[i+1]]; //biases[i] contains an entry for each neuron in layer i+1
-        for (int j = 0; j < neuron_counts[i+1]; j++){
-            biases[i][j] = 0.1;                                             //SET INITIAL BIAS TO 0.1
-        }
-    }
-*/
 }
 
 void Network::forwardPropagate(double* input_vals){
@@ -142,28 +111,32 @@ void Network::showActiveValues(){
     }
 }
 
+void Network::saveOutput(std::string filename)
+{
+    layers[layer_count - 1]->getA().save(filename + "/output.txt", arma::arma_ascii);
+}
+
+void Network::saveWeights(std::string filename)
+{
+    weights.save(filename + "/weights.txt"); //For machine to load
+    for (int i = 0; i < layer_count; ++i){
+        weights(i).save(filename + "/weight_" + std::to_string(i) + ".txt", arma::arma_ascii);
+    }
+}
+
+void Network::saveBiases(std::string filename)
+{
+    biases.save(filename + "/biases.txt");
+    for (int i = 0; i < layer_count; ++i){
+        biases(i).save(filename + std::string("/bias_") + std::to_string(i) + ".txt", arma::arma_ascii);
+    }
+}
+
+
 Network::~Network(){
-    for (int i = 0; i < layer_count; ++i)
-    {
+    for (int i = 0; i < layer_count; ++i){
         delete layers[i];
     }
     delete[] layers;
-
-/*
-    for (int i = 0; i < layer_count - 1; i++){
-        for (int j = 0; j < neuron_counts[i + 1]; j++)
-        {
-            delete[] weights[i][j];
-        }
-        delete[] weights[i];
-    }
-    delete[] weights;
-
-    for (int i = 0; i < layer_count; i++)
-    {
-        delete[] biases[i];
-    }
-    delete[] biases;
-*/
     delete[] neuron_counts;
 }

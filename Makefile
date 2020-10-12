@@ -11,3 +11,6 @@ main.o: main.cpp
 
 clean:
 	rm main.o NN.o main
+
+run_verbose:
+	rm make_test/* && ./main tests/input6.txt tests/set6.txt make_test

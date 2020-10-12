@@ -4,6 +4,7 @@ Student ID : 150180001
 */
 
 #include <armadillo>
+#include <string>
 
 #ifndef _NN
 #define _NN
@@ -74,7 +75,12 @@ public:
 
     void forwardPropagate(double* input_vals);
     void forwardPropagate(arma::mat input_vals);
+
     void showActiveValues();
+
+    void saveOutput(std::string filename);
+    void saveWeights(std::string filename);
+    void saveBiases(std::string filename);
 };
 
 #endif

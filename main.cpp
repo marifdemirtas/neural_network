@@ -9,7 +9,9 @@ COMPILE COMMAND: g++ 150180001.cpp
 
 #include <iostream>
 #include <fstream>
+#include <string>
 #include <armadillo>
+#include <chrono>
 
 #include "NN.h"
 
@@ -23,48 +25,26 @@ int main(int argc, char const *argv[]){
     inputs >> layer_count;
 
     int* neuron_counts = new int[layer_count];
-    for (int i = 0; i < layer_count; ++i)
-    {
+    for (int i = 0; i < layer_count; ++i)    {
         inputs >> neuron_counts[i];
     }
 
     int neuron_types[layer_count];
-    for (int i = 0; i < layer_count; ++i)
-    {
+    for (int i = 0; i < layer_count; ++i){
         inputs >> neuron_types[i];
     }
 
     int test_cases;
     inputs >> test_cases;
 
-//    int input_count = 0;
-//    double x_values[neuron_counts[0]];
     arma::mat x_values(neuron_counts[0], test_cases, arma::fill::zeros);
-
     if (!x_values.load(argv[2])){
         throw std::logic_error("Invalid values");
     };
     arma::inplace_trans(x_values);
 
-/*
-    for (int i = 0; i < neuron_counts[0]*test_cases; ++i){
-        inputs >> x_values(i);
-    }
-*/
-/*  
-    while(inputs >> x_values[input_count++]);
-    input_count--;
-
-    try{                    //Checks if there are any input values remaining 
-        if(input_count != neuron_counts[0]) 
-            throw string("Input shape does not match!");
-    }catch(string err){
-        cerr << err << endl;
-        inputs.close();
-        return 1;
-    }
-*/
     inputs.close();
+
 
     Network* myNN;          //Creates a pointer that will be assigned an object
 
@@ -76,9 +56,23 @@ int main(int argc, char const *argv[]){
         return 1;
     }
 
+    auto start = chrono::high_resolution_clock::now();
     myNN->forwardPropagate(x_values);   //Does a forward propagation using initial x_values
-    myNN->showActiveValues();           //Shows the activated values of nodes after propagation
+    auto stop = chrono::high_resolution_clock::now(); 
+    
+    //myNN->showActiveValues();           //Shows the activated values of nodes after propagation
+    
+    if (argc > 3){
+        myNN->saveOutput(string(argv[3]));
+        myNN->saveWeights(string(argv[3]));
+        myNN->saveBiases(string(argv[3]));
+    }
+
+    auto duration = chrono::duration_cast<chrono::microseconds>(stop - start); 
+    cout << duration.count() << endl; 
+
 
     delete myNN;
+
     return 0;
 }
