@@ -11,7 +11,6 @@ COMPILE COMMAND: g++ 150180001.cpp
 #include <fstream>
 
 #include "NN.h"
-#include "NN.cpp"
 
 using namespace std;
 
