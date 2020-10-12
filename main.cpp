@@ -9,6 +9,7 @@ COMPILE COMMAND: g++ 150180001.cpp
 
 #include <iostream>
 #include <fstream>
+#include <armadillo>
 
 #include "NN.h"
 
@@ -33,9 +34,19 @@ int main(int argc, char const *argv[]){
         inputs >> neuron_types[i];
     }
 
-    double x_val;
+    int test_cases;
+    inputs >> test_cases;
+
+
     int input_count = 0;
-    double x_values[neuron_counts[0]];
+//    double x_values[neuron_counts[0]];
+    arma::mat x_values(neuron_counts[0], test_cases, arma::fill::zeros);
+
+
+    for (int i = 0; i < neuron_counts[0]*test_cases; ++i){
+        inputs >> x_values(i);
+    }
+/*  
     while(inputs >> x_values[input_count++]);
     input_count--;
 
@@ -47,7 +58,7 @@ int main(int argc, char const *argv[]){
         inputs.close();
         return 1;
     }
-
+*/
     inputs.close();
 
     Network* myNN;          //Creates a pointer that will be assigned an object

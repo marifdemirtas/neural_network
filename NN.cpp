@@ -36,6 +36,12 @@ void Layer::setValues(double* z_vals)
     this->a_vals = this->z_vals;
 }
 
+void Layer::setValues(arma::mat z_vals)
+{
+    this->z_vals = z_vals;
+    this->a_vals = this->z_vals;
+}
+
 void Layer::showActiveValues(){
 //    for(int i = 0; i < neuron_count; i++){
 //        std::cout << neurons[i].getA() << std::endl;
@@ -114,6 +120,14 @@ Network::Network(int layer_count, int* neuron_counts, int* neuron_types):weights
 }
 
 void Network::forwardPropagate(double* input_vals){
+    layers[0]->setValues(input_vals);
+    for (int i = 1; i < layer_count; i++){
+        layers[i]->computeZVals(weights(i), biases(i), layers[i-1]->getA());
+        layers[i]->activate();
+    }
+}
+
+void Network::forwardPropagate(arma::mat input_vals){
     layers[0]->setValues(input_vals);
     for (int i = 1; i < layer_count; i++){
         layers[i]->computeZVals(weights(i), biases(i), layers[i-1]->getA());

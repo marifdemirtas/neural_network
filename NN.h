@@ -33,6 +33,7 @@ class Layer //abstract base class for layers of different activations
 
         void showActiveValues();
         void setValues(double* z_vals);
+        void setValues(arma::mat z_vals);
         void computeZVals(arma::mat weight, arma::vec bias, arma::mat a_vals);
 
         virtual void activate() = 0;
@@ -72,6 +73,7 @@ public:
     ~Network();
 
     void forwardPropagate(double* input_vals);
+    void forwardPropagate(arma::mat input_vals);
     void showActiveValues();
 };
 
