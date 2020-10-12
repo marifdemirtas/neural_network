@@ -4,70 +4,46 @@ Student ID : 150180001
 */
 
 #include <iostream>
-#include <cmath>
-
+#include <armadillo>
+#include <cassert>
 #include "NN.h"
 
-Neuron::Neuron(double z){
-    this->z = z;
-    this->a = z;
-}
+void SigmoidLayer::activate()
+{
+    a_vals = 1 / (1 + arma::exp(-z_vals));
+};
 
-void SigmoidNeuron::activate(){
-    setA(1 / (1 + exp(-getZ())));
-}
+void ReluLayer::activate()
+{
+    a_vals = arma::max(arma::zeros(z_vals.n_rows, z_vals.n_cols), z_vals);
+};
 
-void ReluNeuron::activate(){
-    setA(std::max(0.0,getZ()));
-}
+void LReluLayer::activate()
+{
+    a_vals = arma::max(z_vals * 0.1, z_vals);
+};
 
-void LReluNeuron::activate(){
-    setA(std::max(getZ() / 10.0, getZ()));    
-}
-
-void Layer::init(int neuron_count, int neuron_type){
-    switch(neuron_type){
-        case 0:
-            neurons = new SigmoidNeuron[neuron_count];
-            break;
-        case 1:
-            neurons = new LReluNeuron[neuron_count];
-            break;
-        case 2:
-            neurons = new ReluNeuron[neuron_count];
-            break;
-        default:
-            throw std::string("Unidentified activation function!");
-    }
-
+Layer::Layer(int neuron_count):a_vals(neuron_count, 1, arma::fill::ones), z_vals(neuron_count, 1, arma::fill::ones)
+{
     this->neuron_count = neuron_count;
 }
 
-Layer::~Layer(){
-    delete[] neurons;
-}
-
-void Layer::setValues(double* z_vals){
-    for (int i = 0; i < neuron_count; ++i)
-    {
-        neurons[i].setZ(z_vals[i]);
-        neurons[i].setA(z_vals[i]);
+void Layer::setValues(double* z_vals)
+{
+    for (int i = 0; i < neuron_count; ++i){
+        this->z_vals(i) = z_vals[i];
     }
-}
-
-void Layer::activate(){
-    for(int i = 0; i < neuron_count; i++){
-        neurons[i].activate();
-    }    
+    this->a_vals = this->z_vals;
 }
 
 void Layer::showActiveValues(){
-    for(int i = 0; i < neuron_count; i++){
-        std::cout << neurons[i].getA() << std::endl;
-    }    
+//    for(int i = 0; i < neuron_count; i++){
+//        std::cout << neurons[i].getA() << std::endl;
+//    }
+    std::cout << a_vals << std::endl;    
 }
 
-double* Layer::computeNextLayer(double** weights, double* bias, int next_layer_size){
+void Layer::computeZVals(arma::mat weight, arma::vec bias, arma::mat a_vals){
     /*
     DOUBLE* TORETURN = NEW DOUBLE[NEXT_LAYER_SIZE]{0}
     FROM 1 TO NEXT_LAYER_SIZE
@@ -76,29 +52,42 @@ double* Layer::computeNextLayer(double** weights, double* bias, int next_layer_s
         TORETURN[i] += BIAS[i]
     RETURN TORETURN
     */
-    
-    double* next_layer_vals = new double[next_layer_size];
+    assert(weight.n_rows == z_vals.n_rows);
+    assert(weight.n_cols == a_vals.n_rows);
+    assert(bias.n_rows == a_vals.n_rows);
 
-    for (int i = 0; i < next_layer_size; i++){          //MATRIX OP EQ: Z_{i+1} = W_{i} * A_{i} + B_{i}
-        for (int j = 0; j < this->getCount(); j++){
-            next_layer_vals[i] += weights[i][j] * neurons[j].getA();
-        }
-        next_layer_vals[i] += bias[i];
-    }
-
-    return next_layer_vals;
+    this->z_vals = weight * a_vals;
+    this->z_vals.each_col() += bias;
 }
 
-Network::Network(int layer_count, int* neuron_counts, int* neuron_types){
-
+Network::Network(int layer_count, int* neuron_counts, int* neuron_types):weights(layer_count), biases(layer_count)
+{
     this->layer_count = layer_count;
     this->neuron_counts = neuron_counts;
 
     layers = new Layer[layer_count];
-    for (int i = 0; i < layer_count; i++){
-       layers[i].init(neuron_counts[i], neuron_types[i]);
+
+    for (int i = 0; i < layer_count; ++i){
+        switch(neuron_types[i]){
+            case 0:
+                layers[i] = SigmoidLayer(neuron_counts[i]);
+                break;
+            case 1:
+                layers[i] = LReluLayer(neuron_counts[i]);
+                break;
+            case 2:
+                layers[i] = ReluLayer(neuron_counts[i]);
+                break;
+            default:
+                throw std::string("Unidentified activation function!");
+        }
+        weights(i) = arma::randn(neuron_counts[i], neuron_counts[i-1]);
+        weights(i).fill(0.1);
+        biases(i) = arma::randn(neuron_counts[i]);
+        biases(i).fill(0.1);
     }
 
+/*
     weights = new double**[layer_count - 1]; //Array of 2D arrays
                                              //weights[i] is the weight matrix associated with the transition from layer i to i+1 
     for (int i = 0; i < layer_count - 1; i++){
@@ -111,7 +100,9 @@ Network::Network(int layer_count, int* neuron_counts, int* neuron_types){
             }
         }
     }
+*/
 
+/*
     biases = new double*[layer_count - 1]; //Array of arrays, biases[i] is the biases for transition from layer i to i+1
     for (int i = 0; i < layer_count - 1; i++){
         biases[i] = new double[neuron_counts[i+1]]; //biases[i] contains an entry for each neuron in layer i+1
@@ -119,15 +110,13 @@ Network::Network(int layer_count, int* neuron_counts, int* neuron_types){
             biases[i][j] = 0.1;                                             //SET INITIAL BIAS TO 0.1
         }
     }
+*/
 }
 
 void Network::forwardPropagate(double* input_vals){
     layers[0].setValues(input_vals);
     for (int i = 1; i < layer_count; i++){
-        double* next_layer = layers[i - 1].computeNextLayer(weights[i-1], biases[i-1], layers[i].getCount());
-        layers[i].setValues(next_layer);
-        delete next_layer;
-        layers[i].activate();
+        layers[i].computeZVals(weights(i), biases(i), layers[i-1].getA());
     }
 }
 
@@ -140,6 +129,8 @@ void Network::showActiveValues(){
 
 Network::~Network(){
     delete[] layers;
+
+/*
     for (int i = 0; i < layer_count - 1; i++){
         for (int j = 0; j < neuron_counts[i + 1]; j++)
         {
@@ -154,5 +145,6 @@ Network::~Network(){
         delete[] biases[i];
     }
     delete[] biases;
+*/
     delete[] neuron_counts;
 }

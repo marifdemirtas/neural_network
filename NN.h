@@ -3,79 +3,57 @@ Student Name: Mehmet Arif Demirtaş
 Student ID : 150180001
 */
 
+#include <armadillo>
+
 #ifndef _NN
 #define _NN
 
-class Neuron //Abstract base class for neurons
+class Layer //abstract base class for layers of different activations
 {
-private:
-    double z; //value
-    double a; //activated value
-public:
-    Neuron(double z);
-//    ~Neuron();
-    const double getZ() const{
-        return z;
-    };
-    const double getA() const{
-        return a;
-    };
-    void setZ(double z){
-        this->z = z;
-    };
-    void setA(double a){
-        this->a = a;
-    };
+        int neuron_count;
 
-    virtual void activate() = 0;
+    protected:
+        arma::mat z_vals;
+        arma::mat a_vals;
+
+    public:
+        Layer(int neuron_count);
+
+        const int getCount() const{
+            return neuron_count;
+        };
+
+        arma::mat getA(){
+            return a_vals;
+        }
+
+        arma::mat getZ(){
+            return z_vals;
+        }
+
+        void showActiveValues();
+        void setValues(double* z_vals);
+        void computeZVals(arma::mat weight, arma::vec bias, arma::mat a_vals);
+
+        virtual void activate() = 0;
 };
 
-class SigmoidNeuron: public Neuron
+class SigmoidLayer : public Layer
 {
-public:
-    SigmoidNeuron(double z = 0):Neuron(z){};
-//    ~SigmoidNeuron();
-    void activate();
+    public:
+        void activate();
 };
 
-class ReluNeuron: public Neuron
+class ReluLayer : public Layer
 {
-public:
-    ReluNeuron(double z = 0):Neuron(z){};
-//    ~ReluNeuron();
-    void activate();
+    public:
+        void activate();
 };
 
-class LReluNeuron: public Neuron
+class LReluLayer : public Layer
 {
-public:
-    LReluNeuron(double z = 0):Neuron(z){};
-//    ~LReluNeuron();
-    void activate();
-};
-
-class Layer
-{
-    Neuron* neurons;
-    int neuron_count;
-
-public:
-    Layer(){
-        neurons = NULL;
-        neuron_count = 0;
-    }
-    ~Layer();
-
-    const int getCount() const{
-        return neuron_count;
-    };
-
-    void init(int neuron_count, int neuron_type);
-    void setValues(double* z_vals);
-    void activate();
-    void showActiveValues();
-
-    double* computeNextLayer(double** weight, double* bias, int next_layer_size);
+    public:
+        void activate();
 };
 
 class Network
@@ -83,8 +61,8 @@ class Network
     Layer* layers;
     int layer_count;
     int* neuron_counts;
-    double*** weights;
-    double** biases;
+    arma::field<arma::mat> weights;
+    arma::field<arma::vec> biases;
 
 public:
     Network(int layer_count, int* neuron_counts, int* neuron_types);
