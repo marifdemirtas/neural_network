@@ -113,7 +113,7 @@ arma::mat Network::forwardPropagate(arma::mat input_vals){
 
 double Network::computeLogCost(arma::vec y_val)
 {
-    return arma::as_scalar(-(1/layers[layer_count-1]->getA().size()) * ((y_val.t() * arma::log(layers[layer_count-1]->getA().t())) -((1 - y_val.t()) * arma::log(1 - layers[layer_count-1]->getA().t())))); 
+    return arma::as_scalar(-(1/layers[layer_count-1]->getA().size()) * ((y_val.t() * arma::log(layers[layer_count-1]->getA().t())) + ((1 - y_val.t()) * arma::log(1 - layers[layer_count-1]->getA().t())))); 
 }
 
 void Network::showActiveValues(){

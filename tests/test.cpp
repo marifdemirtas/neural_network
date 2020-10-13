@@ -109,4 +109,19 @@ TEST_CASE("Network class unit tests")
         REQUIRE(arma::approx_equal(a_vals, arma::vec({0.2}), "absdiff", 0.001)); //0.2 calculated by hand for weights=bias=0.1
     }
 
+    SECTION("Multi-dimensional Forward-prop"){ 
+        arma::mat inputs({{0,1,0,0}, {0,1,1,0}, {1,1,1,0}});
+        arma::inplace_trans(inputs);
+                    //outputs are calculated by hand 0.14, 0.16, 0.18
+        arma::mat a_vals = NN.forwardPropagate(inputs);
+        REQUIRE(arma::approx_equal(a_vals, arma::rowvec({0.14, 0.16, 0.18}), "absdiff", 0.1)); //0.2 calculated by hand for weights=bias=0.1
+    }
+
+    SECTION("Compute cost"){
+        arma::mat inputs({{0,1,0,0}, {0,1,1,0}, {1,1,1,0}});
+        NN.forwardPropagate(inputs.t());
+        double cost = NN.computeLogCost(arma::vec({0,1,1}));
+                    //cost is calculated by hand approx 1.2291
+        REQUIRE(cost - 1.2291 < 0.001); //0.2 calculated by hand for weights=bias=0.1
+    }
 }
