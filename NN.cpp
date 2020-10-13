@@ -10,9 +10,14 @@ Student ID : 150180001
 #include <cassert>
 #include "NN.h"
 
+arma::mat SigmoidLayer::sigmoid(arma::mat x)
+{
+    return 1 / (1 + arma::exp(-x));
+}
+
 void SigmoidLayer::activate()
 {
-    a_vals = 1 / (1 + arma::exp(-z_vals));
+    a_vals = sigmoid(z_vals);
 };
 
 void ReluLayer::activate()
@@ -22,8 +27,30 @@ void ReluLayer::activate()
 
 void LReluLayer::activate()
 {
-    a_vals = arma::max(z_vals * 0.1, z_vals);
+    a_vals = arma::max(z_vals * RELU_LEAK, z_vals);
 };
+
+arma::mat SigmoidLayer::derivate()
+{   //dsigmoid is sigmoid * (1 - sigmoid)
+    return sigmoid(z_vals) % (1 - sigmoid(z_vals));
+};
+
+arma::mat ReluLayer::derivate()
+{   // 1 if z_vals > 0, else 0
+    arma::mat ret = z_vals;
+    ret.elem(find(ret > 0)).fill(1);
+    ret.elem(find(ret <= 0)).fill(0);
+    return ret;
+};
+
+arma::mat LReluLayer::derivate()
+{   //1 if z_vals > 0, else RELU_LEAK
+    arma::mat ret = z_vals;
+    ret.elem(find(ret > 0)).fill(1);
+    ret.elem(find(ret <= 0)).fill(RELU_LEAK);
+    return ret;
+};
+
 
 Layer::Layer(int neuron_count):a_vals(neuron_count, 1, arma::fill::ones), z_vals(neuron_count, 1, arma::fill::ones)
 {
@@ -46,7 +73,8 @@ void Layer::setValues(arma::mat z_vals)
 
 void Layer::showActiveValues()
 {
-    std::cout << a_vals << std::endl;    
+    std::cout << "z: " << z_vals << std::endl;    
+    std::cout << "z: " << a_vals << std::endl;    
 }
 
 void Layer::computeZVals(arma::mat weight, arma::vec bias, arma::mat a_vals)
@@ -81,9 +109,11 @@ Network::Network(int layer_count, int* neuron_counts, int* neuron_types):weights
                 throw std::string("Unidentified activation function!");
         }
         weights(i) = arma::randn(neuron_counts[i], neuron_counts[i-1]);
-        weights(i).fill(0.1); // comment out 
+//        weights(i).fill(0.1); // comment out 
+        grad_weights = weights;
         biases(i) = arma::randn(neuron_counts[i]);
-        biases(i).fill(0.1);  // comment out
+//        biases(i).fill(0.1);  // comment out
+        grad_biases = biases;
     }
 
 
@@ -91,14 +121,16 @@ Network::Network(int layer_count, int* neuron_counts, int* neuron_types):weights
 
 arma::mat Network::forwardPropagate(double* input_vals){
     layers[0]->setValues(input_vals);
+
     for (int i = 1; i < layer_count; i++){
         layers[i]->computeZVals(weights(i), biases(i), layers[i-1]->getA());
         layers[i]->activate();
     }
-    return layers[layer_count-1]->getA();
+    return getOutput();
 }
 
-arma::mat Network::forwardPropagate(arma::mat input_vals){
+arma::mat Network::forwardPropagate(arma::mat input_vals)
+{
     assert(input_vals.n_rows == layers[0]->getCount());
 
     layers[0]->setValues(input_vals);
@@ -106,14 +138,51 @@ arma::mat Network::forwardPropagate(arma::mat input_vals){
         layers[i]->computeZVals(weights(i), biases(i), layers[i-1]->getA());
         layers[i]->activate();
     }
-//    arma::vec y(layers[layer_count-1]->getA().size(), arma::fill::ones);
+//    arma::vec y(getOutput().size(), arma::fill::ones);
 //    std::cout << computeLogCost(y) << std::endl;
-    return layers[layer_count-1]->getA();
+    return getOutput();
+}
+
+void Network::backPropagate(arma::mat output_vals)
+{
+    assert(output_vals.n_rows == getOutput().n_rows);
+    assert(output_vals.n_cols == getOutput().n_cols);
+
+    //For start, dJ/dA_i * dA_i/dZ_i * dZ_i/dW_i
+    // 1/m           d_cost*derivate()  A_i-1.t()
+    //                     of layer
+    //For iteration, also calculate dJ/dZ_i * dZ_i/dA_i-1
+    //            W.t()  * (d_cost*derivate())
+    //In iteration, calculate dJ/dW_i-1 as dJ/dA_i-1 * dA_i-1/d_Zi-1 * dZ_i-1/dW_i-1
+    //                                      above       derivate()       A.t()
+
+    //Similarly, start dJ/dA_i * dA_i/dZ_i * dZ_i/db_i
+    // 1/m              d_cost*derivate() -> sum all rows to a column vec
+    //Iteration is above * derivate() -> sum to colvec
+
+//    arma::mat d_cost = -(output_vals / getOutput() + (1 - output_vals)/(1 - getOutput()));
+    arma::mat d_activation = getOutput() - output_vals;
+    double size_factor = 1.0 / output_vals.n_cols;
+    for (int i = layer_count-1; i > 0; i--){
+        grad_weights(i) = size_factor * (d_activation * layers[i-1]->getA().t());
+        grad_biases(i) = size_factor * arma::sum(d_activation, 1);
+        d_activation = weights(i).t() * d_activation;
+        d_activation = d_activation % layers[i-1]->derivate();
+    }
+}
+
+void Network::optimizeParameters(double learning_rate)
+{
+    for (int i = layer_count-1; i > 0; i--)
+    {
+        weights(i) -= learning_rate * grad_weights(i);
+        biases(i) -= learning_rate * grad_biases(i);
+    }
 }
 
 double Network::computeLogCost(arma::vec y_val)
 {
-    return arma::as_scalar(-(1/layers[layer_count-1]->getA().size()) * ((y_val.t() * arma::log(layers[layer_count-1]->getA().t())) + ((1 - y_val.t()) * arma::log(1 - layers[layer_count-1]->getA().t())))); 
+    return arma::as_scalar(-(1/getOutput().size()) * ((y_val.t() * arma::log(getOutput().t())) + ((1 - y_val.t()) * arma::log(1 - getOutput().t())))); 
 }
 
 void Network::showActiveValues(){
@@ -123,9 +192,37 @@ void Network::showActiveValues(){
     }
 }
 
+void Network::train(arma::mat input_vals, arma::mat output_vals, int epochs, double learning_rate)
+{
+    for (int i = 0; i < epochs; ++i){
+        forwardPropagate(input_vals);
+        if (i % 100 == 0){
+            std::cout << "The cost at epoch " << i << " is: " << computeLogCost(output_vals) << std::endl;
+        }
+        backPropagate(output_vals);
+        optimizeParameters(learning_rate);
+    }
+    std::cout << "Network trained, final cost: " << computeLogCost(output_vals) << std::endl;
+}
+
+arma::mat Network::getOutput()
+{
+    return layers[layer_count-1]->getA();
+}
+
+arma::field<arma::mat> Network::getWeights()
+{
+    return weights;
+}
+
+arma::field<arma::vec> Network::getBiases()
+{
+    return biases;
+}
+
 void Network::saveOutput(std::string filename)
 {
-    layers[layer_count - 1]->getA().save(filename + "/output.txt", arma::arma_ascii);
+    getOutput().save(filename + "/output.txt", arma::arma_ascii);
 }
 
 void Network::saveWeights(std::string filename)

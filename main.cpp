@@ -40,8 +40,6 @@ int main(int argc, char const *argv[]){
     };
     arma::inplace_trans(x_values);
 
-    std::cout << x_values.n_rows << std::endl;
-
     inputs.close();
 
     Network* myNN;          //Creates a pointer that will be assigned an object
@@ -67,7 +65,7 @@ int main(int argc, char const *argv[]){
     }
 
     auto duration = chrono::duration_cast<chrono::microseconds>(stop - start); 
-    cout << duration.count() << endl; 
+    cout << "Done in " << duration.count() << " microseconds" << endl; 
 
 
     delete myNN;
