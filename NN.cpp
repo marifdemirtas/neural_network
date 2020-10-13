@@ -6,6 +6,7 @@ Student ID : 150180001
 #include <iostream>
 #include <armadillo>
 #include <string>
+
 #include <cassert>
 #include "NN.h"
 
@@ -80,28 +81,39 @@ Network::Network(int layer_count, int* neuron_counts, int* neuron_types):weights
                 throw std::string("Unidentified activation function!");
         }
         weights(i) = arma::randn(neuron_counts[i], neuron_counts[i-1]);
-        weights(i).fill(0.1);
+        weights(i).fill(0.1); // comment out 
         biases(i) = arma::randn(neuron_counts[i]);
-        biases(i).fill(0.1);
+        biases(i).fill(0.1);  // comment out
     }
 
 
 }
 
-void Network::forwardPropagate(double* input_vals){
+arma::mat Network::forwardPropagate(double* input_vals){
     layers[0]->setValues(input_vals);
     for (int i = 1; i < layer_count; i++){
         layers[i]->computeZVals(weights(i), biases(i), layers[i-1]->getA());
         layers[i]->activate();
     }
+    return layers[layer_count-1]->getA();
 }
 
-void Network::forwardPropagate(arma::mat input_vals){
+arma::mat Network::forwardPropagate(arma::mat input_vals){
+    assert(input_vals.n_rows == layers[0]->getCount());
+
     layers[0]->setValues(input_vals);
     for (int i = 1; i < layer_count; i++){
         layers[i]->computeZVals(weights(i), biases(i), layers[i-1]->getA());
         layers[i]->activate();
     }
+//    arma::vec y(layers[layer_count-1]->getA().size(), arma::fill::ones);
+//    std::cout << computeLogCost(y) << std::endl;
+    return layers[layer_count-1]->getA();
+}
+
+double Network::computeLogCost(arma::vec y_val)
+{
+    return arma::as_scalar(-(1/layers[layer_count-1]->getA().size()) * ((y_val.t() * arma::log(layers[layer_count-1]->getA().t())) -((1 - y_val.t()) * arma::log(1 - layers[layer_count-1]->getA().t())))); 
 }
 
 void Network::showActiveValues(){

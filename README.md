@@ -13,7 +13,7 @@ First argument is the settings for neural networks.
 Second argument is the x values of examples.
     Each row contains one example, each column corresponds to a feature.
 
-Third argument is optional, is a directory name. If given, following is saved.
+Third argument (optional) is path to an existing directory. If given, program will save the following under that directory.
     output.txt - The activation values of last layer
     weights.txt - Binary file for weights
     weight-i.txt - Human readable file for each weight

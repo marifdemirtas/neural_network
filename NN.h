@@ -71,10 +71,25 @@ class Network
 
 public:
     Network(int layer_count, int* neuron_counts, int* neuron_types);
+    //constructor from file
     ~Network();
 
-    void forwardPropagate(double* input_vals);
-    void forwardPropagate(arma::mat input_vals);
+    arma::mat forwardPropagate(double* input_vals);
+    arma::mat forwardPropagate(arma::mat input_vals); //can return activation values of last layer
+
+    //setWeights(arma::mat)
+    //setBias
+
+    //modifyWeightAt (span?)
+    //modifyBiasAt (span?)
+
+    //backprop (automatically set parameters)
+
+    double computeLogCost(arma::vec y_val);
+    //computeLogCost
+    //get a y_values in main
+
+    //WRAPPER CLASS THAT will implement grad desc.
 
     void showActiveValues();
 

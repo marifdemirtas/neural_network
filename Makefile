@@ -10,7 +10,10 @@ main.o: main.cpp
 	$(CC) main.cpp -c -o main.o
 
 clean:
-	rm main.o NN.o main
+	rm -f main.o NN.o main && rm make_test/*
 
 run_verbose:
-	rm make_test/* && ./main tests/input6.txt tests/set6.txt make_test
+	rm make_test/* && ./main files/input6.txt files/set6.txt make_test
+
+test: NN.cpp tests/test.cpp
+	rm -f tests/test && g++ tests/test.cpp NN.cpp -o tests/test -larmadillo && tests/test 

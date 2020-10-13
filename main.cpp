@@ -34,17 +34,15 @@ int main(int argc, char const *argv[]){
         inputs >> neuron_types[i];
     }
 
-    int test_cases;
-    inputs >> test_cases;
-
-    arma::mat x_values(neuron_counts[0], test_cases, arma::fill::zeros);
+    arma::mat x_values;
     if (!x_values.load(argv[2])){
         throw std::logic_error("Invalid values");
     };
     arma::inplace_trans(x_values);
 
-    inputs.close();
+    std::cout << x_values.n_rows << std::endl;
 
+    inputs.close();
 
     Network* myNN;          //Creates a pointer that will be assigned an object
 
