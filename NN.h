@@ -35,8 +35,8 @@ class Layer //abstract base class for layers of different activations
 
         void showActiveValues();
         void setValues(double* z_vals);
-        void setValues(arma::mat z_vals);
-        void computeZVals(arma::mat weight, arma::vec bias, arma::mat a_vals);
+        void setValues(arma::mat& z_vals);
+        void computeZVals(arma::mat& weight, arma::vec& bias, arma::mat a_vals);
 
         virtual void activate() = 0;
         virtual arma::mat derivate() = 0;
@@ -44,7 +44,7 @@ class Layer //abstract base class for layers of different activations
 
 class SigmoidLayer : public Layer
 {
-        arma::mat sigmoid(arma::mat x);
+        arma::mat sigmoid(arma::mat& x);
     public:
         SigmoidLayer(int count):Layer(count){};
         void activate();
@@ -89,26 +89,37 @@ public:
     void backPropagate(arma::mat output_vals); //does a round of backprop, sets up grads matrices
     void optimizeParameters(double learning_rate); //automatically updates parameters using the grads
 
+    void setWeights(double val){
+        for (int i = 0; i < layer_count; ++i){
+            weights(i).fill(0.1);
+            biases(i).fill(0.1);
+        }
+    };
 
-    //setWeights(arma::mat)
-    //setBias
-
-    double computeLogCost(arma::vec y_val);
-    //computeLogCost
-    //get a y_values in main
-
-    //WRAPPER CLASS THAT will implement grad desc.
-    void train(arma::mat input_vals, arma::mat output_vals, int epochs, double learning_rate);
+    double computeLogCost(arma::mat y_val);
 
     void showActiveValues();
 
     arma::mat getOutput();
-    arma::field<arma::mat> getWeights();
-    arma::field<arma::vec> getBiases();
+    arma::field<arma::mat>& getWeights();
+    arma::field<arma::vec>& getBiases();
 
     void saveOutput(std::string filename);
     void saveWeights(std::string filename);
     void saveBiases(std::string filename);
 };
 
+/*
+class NetworkModel
+{
+    Network* net;
+    double prediction_limit;
+public:
+    NetworkModel(int layer_count, int* neuron_counts, int* neuron_types, double prediction_limit);
+    void train(arma::mat input_vals, arma::mat output_vals, int epochs, double learning_rate);
+
+    ~NetworkModel();
+    
+};
+*/
 #endif

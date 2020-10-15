@@ -40,6 +40,12 @@ int main(int argc, char const *argv[]){
     };
     arma::inplace_trans(x_values);
 
+    arma::mat y_values;
+    if (!y_values.load(argv[3])){
+        throw std::logic_error("Invalid values");
+    };
+//    arma::inplace_trans(y_values);
+
     inputs.close();
 
     Network* myNN;          //Creates a pointer that will be assigned an object
@@ -58,10 +64,13 @@ int main(int argc, char const *argv[]){
     
     //myNN->showActiveValues();           //Shows the activated values of nodes after propagation
     
-    if (argc > 3){
-        myNN->saveOutput(string(argv[3]));
-        myNN->saveWeights(string(argv[3]));
-        myNN->saveBiases(string(argv[3]));
+
+//    myNN->train(x_values, y_values.t(), 30000, 0.01);
+
+    if (argc > 4){
+        myNN->saveOutput(string(argv[4]));
+        myNN->saveWeights(string(argv[4]));
+        myNN->saveBiases(string(argv[4]));
     }
 
     auto duration = chrono::duration_cast<chrono::microseconds>(stop - start); 
