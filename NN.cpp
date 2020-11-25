@@ -1,14 +1,38 @@
-/*
-Student Name: Mehmet Arif Demirtaş
-Student ID : 150180001
-*/
-
 #include <iostream>
 #include <armadillo>
-#include <string>
-
 #include <cassert>
+
 #include "NN.h"
+
+/**
+ * Helper function for data with multiple classes, turns a vector with tags into an expanded binary vector.
+ *
+ * @param raw {arma::mat} - row vector to be extended 
+ */
+arma::mat extendVector(arma::mat raw, int row_size)
+{
+    arma::mat extended(row_size, raw.n_cols, arma::fill::zeros);
+/*
+    std::cout << "Gonna replace " << arma::find(raw == 0) << std::endl;
+    extended.each_col(arma::find(raw == 0)) = arma::vec({1,0,0});
+    std::cout << "extended is "<< std::endl << extended;
+    std::cout << "Gonna replace " << arma::find(raw == 1) << std::endl;
+    extended.each_col(arma::find(raw == 1)) = arma::vec({0,1,0});
+    std::cout << "extended is " << std::endl<< extended;
+    std::cout << "Gonna replace " << arma::find(raw == 2) << std::endl;
+    extended.each_col(arma::find(raw == 2)) = arma::vec({0,0,1});
+    std::cout << "extended is " << std::endl<< extended;
+*/
+
+    arma::vec zero_vector(row_size, arma::fill::zeros);
+    for (int i = 0; i < row_size; ++i){
+        zero_vector(i) = 1;
+        extended.each_col(arma::find(raw == i)) = zero_vector;
+        zero_vector(i) = 0;
+    }
+
+    return extended;
+}
 
 /** 
  * Helper function for SigmoidLayer that calculates a vectorized sigmoid function.
@@ -99,10 +123,10 @@ void Layer::computeZVals(arma::mat& weight, arma::vec& bias, arma::mat a_vals)
     this->z_vals.each_col() += bias;
 }
 
-Network::Network(int layer_count, int* neuron_counts, int* neuron_types):weights(layer_count), biases(layer_count)
+Network::Network(int layer_count, std::vector<int> neuron_counts, std::vector<int> neuron_types):weights(layer_count), biases(layer_count)
 {
+
     this->layer_count = layer_count;
-    this->neuron_counts = neuron_counts;
 
     layers = new Layer*[layer_count];
 
@@ -120,12 +144,11 @@ Network::Network(int layer_count, int* neuron_counts, int* neuron_types):weights
             default:
                 throw std::string("Unidentified activation function!");
         }
-        weights(i) = arma::randn(neuron_counts[i], neuron_counts[i-1]);
+        weights(i) = arma::randn(neuron_counts[i], neuron_counts[i-1]) * 0.01;
         grad_weights = weights;
-        biases(i) = arma::randn(neuron_counts[i]);
+        biases(i) = arma::randn(neuron_counts[i]) * 0.01;
         grad_biases = biases;
     }
-
 
 }
 
@@ -195,8 +218,7 @@ void Network::backPropagate(arma::mat output_vals)
 
 void Network::optimizeParameters(double learning_rate)
 {
-    for (int i = layer_count-1; i > 0; i--)
-    {
+    for (int i = layer_count-1; i > 0; i--){
         weights(i) -= learning_rate * grad_weights(i);
         biases(i) -= learning_rate * grad_biases(i);
     }
@@ -205,11 +227,12 @@ void Network::optimizeParameters(double learning_rate)
 /** 
  * Compute logistic cost over the results of last forward propagation and given output vals.
  *
- * @param x {arma::mat} - A matrix where the output of each training example is represented as columns (for single output, a rowvec).
+ * @param y_val {arma::mat} - A matrix where the output of each training example is represented as columns (for single output, a rowvec).
  */
-double Network::computeLogCost(arma::mat y_val)
+arma::mat Network::computeLogCost(arma::mat y_val)
 {
-    return arma::as_scalar(-(1.0/getOutput().size()) * ((y_val * arma::log(getOutput().t())) + ((1 - y_val) * arma::log(1 - getOutput().t())))); 
+    arma::mat cost = -(1.0/getOutput().n_cols) * ((y_val * arma::log(getOutput().t())) + ((1 - y_val) * arma::log(1 - getOutput().t())));
+    return cost.diag();
 }
 
 void Network::showActiveValues(){
@@ -261,53 +284,106 @@ Network::~Network(){
         delete layers[i];
     }
     delete[] layers;
-    delete[] neuron_counts;
 }
-/*
-NetworkModel::NetworkModel(int layer_count, int* neuron_counts, int* neuron_types, double prediction_limit)
+
+
+NetworkModel::NetworkModel(int layer_count, std::vector<int> neuron_counts, std::vector<int> neuron_types, double prediction_limit)
 {
     net = new Network(layer_count, neuron_counts, neuron_types);
     this->prediction_limit = prediction_limit;
 }
 
-void NetworkModel::train(arma::mat input_vals, arma::mat output_vals, int epochs, double learning_rate)
+NetworkModel::NetworkModel(std::string filename)
+{
+    std::ifstream options(filename); //Open a input file stream using the given argument
+    int layer_count;
+    
+    std::vector<int> neuron_counts;
+    std::vector<int> neuron_types;
+    
+    options >> layer_count; 
+    options >> std::ws;
+
+    int num;
+    std::string line;
+    std::getline(options, line);
+
+    std::istringstream stream_1(line);
+    while(stream_1 >> num){
+        neuron_counts.push_back(num);
+    }
+
+    std::getline(options, line);
+    //stream.str(line); //For some reason, .str(string) does not work
+    std::istringstream stream_2(line);
+    while(stream_2 >> num){
+        neuron_types.push_back(num);
+    }
+
+    options.close();
+
+    net = new Network(layer_count, neuron_counts, neuron_types);
+}
+
+arma::mat NetworkModel::train(arma::mat input_vals, arma::mat output_vals, int epochs, double learning_rate, bool verbose)
 {
     for (int i = 0; i < epochs; ++i){
         net->forwardPropagate(input_vals);
-        if (i % 100 == 0){
+        if (verbose && i % 100 == 0){
             std::cout << "The cost at epoch " << i << " is: " << net->computeLogCost(output_vals) << std::endl;
         }
         net->backPropagate(output_vals);
         net->optimizeParameters(learning_rate);
     }
-    std::cout << "Network trained, final cost: " << net->computeLogCost(output_vals) << std::endl;
+    arma::mat final_cost = net->computeLogCost(output_vals);
+    if (verbose){
+        std::cout << "Network trained, final cost: " << final_cost << std::endl;
+    }
+    return final_cost;
 }
 
-void NetworkModel::test(arma::mat input_vals, arma::mat output_vals)
+std::tuple<arma::mat, double> NetworkModel::test(arma::mat input_vals, arma::mat output_vals)
 {
     net->forwardPropagate(input_vals);
-    double cost = net->computeLogCost(output_vals);
-
+    if (output_vals.n_rows == 1){
+        arma::uvec errors = arma::find(predictSingleFeature(input_vals) != output_vals);
+        arma::mat test_cost = net->computeLogCost(output_vals);
+        double accuracy = 1 - (errors.size() / static_cast<double>(output_vals.size()));
+        return std::tuple<arma::mat, double>(test_cost, accuracy);
+    }else{
+        arma::uvec errors = arma::find(predictMultipleFeature(input_vals) != output_vals);
+        arma::mat test_cost = net->computeLogCost(output_vals);
+        double accuracy = 1 - (errors.size() / static_cast<double>(output_vals.size()));
+        return std::tuple<arma::mat, double>(test_cost, accuracy);        
+    }
 }
 
-void NetworkModel::predictSingleFeature(arma::mat input_vals)
+arma::mat NetworkModel::predictSingleFeature(arma::mat input_vals)
 {
     arma::mat output = net->forwardPropagate(input_vals);
-    output.elem(arma::find(output > prediction_limit)) = 1;
-    output.elem(arma::find(output <= prediction_limit)) = 0;
+    output.elem(arma::find(output > prediction_limit)).fill(1);
+    output.elem(arma::find(output <= prediction_limit)).fill(0);
     return output;
 }
 
-void NetworkModel::predictMultipleFeature(arma::mat input_vals)
+arma::umat NetworkModel::predictMultipleFeature(arma::mat input_vals)
 {
     arma::mat output = net->forwardPropagate(input_vals);
-    arma::find(output.each_col() > ) = 1;
-    output.elem(arma::find(output <= prediction_limit)) = 0;
-    return output;
+    std::cout << output << std::endl;
+    arma::umat pred = arma::index_max(output);
+
+    arma::rowvec test(input_vals.n_cols);
+    return pred;
+}
+
+void NetworkModel::save(std::string directory)
+{
+    net->saveOutput(directory);
+    net->saveWeights(directory);
+    net->saveBiases(directory);
 }
 
 NetworkModel::~NetworkModel()
 {
     delete net;
 }
-*/
