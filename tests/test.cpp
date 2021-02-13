@@ -129,8 +129,8 @@ TEST_CASE("Inherited layer class derivation tests")
 TEST_CASE("Network class unit tester 1")
 {
     int layer_count = 3;
-    int* neuron_counts = new int[3]{4, 2, 1};
-    int neuron_types[3] = {2, 2, 2};
+    std::vector<int> neuron_counts = {4, 2, 1};
+    std::vector<int> neuron_types = {2, 2, 2};
     Network NN(layer_count, neuron_counts, neuron_types);
     NN.setWeights(0.1);
     SECTION("Forward-prop from array"){
@@ -156,7 +156,7 @@ TEST_CASE("Network class unit tester 1")
     SECTION("Compute cost"){
         arma::mat inputs({{0,1,0,0}, {0,1,1,0}, {1,1,1,0}});
         NN.forwardPropagate(inputs.t());
-        double cost = NN.computeLogCost(arma::rowvec({0,1,1}));
+        double cost = arma::as_scalar(NN.computeLogCost(arma::rowvec({0,1,1})));
                     //cost is calculated by hand approx 1.2327
         CHECK(cost == Approx(1.2327).epsilon(0.001));
     }
@@ -165,16 +165,16 @@ TEST_CASE("Network class unit tester 1")
 TEST_CASE("Network class unit tester 2")
 {
     int layer_count = 3;
-    int* neuron_counts = new int[3]{2, 4, 1};
-    int neuron_types[3] = {0, 0, 0};
+    std::vector<int> neuron_counts = {2, 4, 1};
+    std::vector<int> neuron_types = {0, 0, 0};
 
     arma::mat x_data;
     arma::mat y_data;
-    x_data.load("files/set7/set7.txt");
+    x_data.load("files/set7/old/set7.txt");
     arma::inplace_trans(x_data);
-    y_data.load("files/set7/set7-y.txt");
+    y_data.load("files/set7/old/set7-y.txt");
     arma::mat output;
-    output.load("files/set7/set7-o.txt");
+    output.load("files/set7/old/set7-o.txt");
     arma::inplace_trans(output);
 
     Network NN(layer_count, neuron_counts, neuron_types);
@@ -185,7 +185,7 @@ TEST_CASE("Network class unit tester 2")
         CHECK(arma::approx_equal(output, NN.getOutput(), "absdiff", 0.001));
         SECTION("Compute cost"){
             NN.forwardPropagate(x_data);
-            double cost = NN.computeLogCost(y_data.t());
+            double cost = arma::as_scalar(NN.computeLogCost(y_data.t()));
             CHECK(cost == Approx(0.7450).epsilon(0.001));
         }
     }
@@ -202,8 +202,8 @@ TEST_CASE("Network class unit tester 2")
         arma::field<arma::vec> calc_b = b;
 
         for (arma::uword i = 1; i < w.n_rows; ++i){
-            calc_w(i).load("files/set7/weights_" + std::to_string(i) + ".txt");
-            calc_b(i).load("files/set7/biases_" + std::to_string(i) + ".txt");
+            calc_w(i).load("files/set7/old/weights_" + std::to_string(i) + ".txt");
+            calc_b(i).load("files/set7/old/biases_" + std::to_string(i) + ".txt");
 
             CHECK(arma::approx_equal(w(i), calc_w(i), "absdiff", 0.001));
             CHECK(arma::approx_equal(b(i), calc_b(i), "absdiff", 0.001));
@@ -211,21 +211,30 @@ TEST_CASE("Network class unit tester 2")
     }
 }
 
-/*
+
 TEST_CASE("Full training")
 {
     int layer_count = 3;
-    int* neuron_counts = new int[3]{2, 4, 1};
-    int neuron_types[3] = {0, 0, 0};
+    std::vector<int> neuron_counts = {2, 4, 1};
+    std::vector<int> neuron_types = {0, 0, 0};
 
-    arma::mat x_data;
-    arma::mat y_data;
-    x_data.load("files/set7.txt");
-    arma::inplace_trans(x_data);
-    y_data.load("files/set7-y.txt");
+    arma::mat x, y, test_x, test_y;
+    x.load("files/set7/train-x.txt");
+    y.load("files/set7/train-y.txt");
+    test_x.load("files/set7/test-x.txt");
+    test_y.load("files/set7/test-y.txt");
 
-    Network NN(layer_count, neuron_counts, neuron_types);
+    NetworkModel NN(layer_count, neuron_counts, neuron_types);
 
-    NN.train(x_data, y_data.t(), 1200, 0.9);
+    NN.train(x, y, 10000, 0.5, false);
+
+    auto train_results = NN.test(x, y);
+    std::cout << "Total cost of train set:" << std::get<0>(train_results) << std::endl;
+    std::cout << "Accuracy on train set:" << std::get<1>(train_results) << std::endl;
+
+    auto test_results = NN.test(test_x, test_y);
+    std::cout << "Total cost of test set:" << std::get<0>(test_results) << std::endl;
+    std::cout << "Accuracy on test set:" << std::get<1>(test_results) << std::endl;
+
+
 }
-*/
