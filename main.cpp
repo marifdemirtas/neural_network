@@ -1,15 +1,4 @@
-/*
-Student Name: Mehmet Arif Demirtaş
-Student ID : 150180001
-
-COMPILE COMMAND: g++ 150180001.cpp
-
-#include "NN.cpp" can be commented out to link two cpp files in compile phase, using 'g++ -o result NN.cpp 150180001.cpp', which will create a executable called 'result'. 
-*/
-
 #include <iostream>
-#include <fstream>
-#include <string>
 #include <armadillo>
 #include <chrono>
 
@@ -19,65 +8,59 @@ using namespace std;
 
 int main(int argc, char const *argv[]){
 
-    ifstream inputs(argv[1]); //Open a input file stream using the given argument
+//    myNN->forwardPropagate(x_values);   //Does a forward propagation using initial x_values
 
-    int layer_count;
-    inputs >> layer_count;
+    NetworkModel model(argv[1]);
 
-    int* neuron_counts = new int[layer_count];
-    for (int i = 0; i < layer_count; ++i)    {
-        inputs >> neuron_counts[i];
+    arma::mat x;
+    arma::mat y;
+    x.load(argv[2]);
+    y.load(argv[3]);
+
+
+    if (y.n_rows <= 1){
+        y = extendVector(y, 3);
     }
 
-    int neuron_types[layer_count];
-    for (int i = 0; i < layer_count; ++i){
-        inputs >> neuron_types[i];
-    }
-
-    arma::mat x_values;
-    if (!x_values.load(argv[2])){
-        throw std::logic_error("Invalid values");
-    };
-    arma::inplace_trans(x_values);
-
-    arma::mat y_values;
-    if (!y_values.load(argv[3])){
-        throw std::logic_error("Invalid values");
-    };
-//    arma::inplace_trans(y_values);
-
-    inputs.close();
-
-    Network* myNN;          //Creates a pointer that will be assigned an object
-
-    try{                    //Creates a neural network if input is valid 
-        myNN = new Network(layer_count, neuron_counts, neuron_types);
-    }
-    catch(string& err){
-        cerr << err << endl;
-        return 1;
-    }
+    cout << "Shape of x: " << x.n_rows << "*" << x.n_cols << endl; 
+    cout << "Shape of y: " << y.n_rows << "*" << y.n_cols << endl; 
 
     auto start = chrono::high_resolution_clock::now();
-    myNN->forwardPropagate(x_values);   //Does a forward propagation using initial x_values
+    model.train(x, y, 200, 0.00075, false);
     auto stop = chrono::high_resolution_clock::now(); 
     
-    //myNN->showActiveValues();           //Shows the activated values of nodes after propagation
-    
-
-//    myNN->train(x_values, y_values.t(), 30000, 0.01);
-
-    if (argc > 4){
-        myNN->saveOutput(string(argv[4]));
-        myNN->saveWeights(string(argv[4]));
-        myNN->saveBiases(string(argv[4]));
-    }
+    model.save(argv[4]);
 
     auto duration = chrono::duration_cast<chrono::microseconds>(stop - start); 
-    cout << "Done in " << duration.count() << " microseconds" << endl; 
+    cout << "Training done in " << duration.count() << " microseconds" << endl; 
 
+    arma::mat x_test;
+    arma::mat y_test;
+    x_test.load(argv[5]);
+    y_test.load(argv[6]);
 
-    delete myNN;
+/*
+    if (y_test.n_rows <= 1){
+        y_test = extendVector(y_test, 3);
+    }
+*/
+    cout << "Shape of x_test: " << x_test.n_rows << "*" << x_test.n_cols << endl; 
+    cout << "Shape of y_test: " << y_test.n_rows << "*" << y_test.n_cols << endl; 
+
+    start = chrono::high_resolution_clock::now();
+    auto train_results = model.test(x, y);
+    auto test_results = model.test(x_test, y_test);
+    stop = chrono::high_resolution_clock::now(); 
+
+    cout << "Total cost of train set:" << get<0>(train_results) << endl;
+    cout << "Accuracy on train set:" << get<1>(train_results) << endl;
+
+    cout << "Total cost of test set:" << get<0>(test_results) << endl;
+    cout << "Accuracy on test set:" << get<1>(test_results) << endl;
+
+    duration = chrono::duration_cast<chrono::microseconds>(stop - start); 
+    cout << "Testing done in " << duration.count() << " microseconds" << endl; 
+
 
     return 0;
 }

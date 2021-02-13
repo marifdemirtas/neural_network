@@ -1,14 +1,15 @@
-/*
-Student Name: Mehmet Arif Demirtaş
-Student ID : 150180001
-*/
+#include <string>
+#include <sstream>
+#include <vector>
+#include <tuple>
 
 #include <armadillo>
-#include <string>
 
 #ifndef _NN
 #define _NN
 #define RELU_LEAK 0.1
+
+arma::mat extendVector(arma::mat raw, int row_size);
 
 class Layer //abstract base class for layers of different activations
 {
@@ -71,7 +72,7 @@ class Network
 {
     Layer** layers;
     int layer_count;
-    int* neuron_counts;
+
     arma::field<arma::mat> weights;
     arma::field<arma::vec> biases;
 
@@ -79,7 +80,7 @@ class Network
     arma::field<arma::vec> grad_biases;
 
 public:
-    Network(int layer_count, int* neuron_counts, int* neuron_types);
+    Network(int layer_count, std::vector<int> neuron_counts, std::vector<int> neuron_types);
     //constructor from file
     ~Network();
 
@@ -96,7 +97,7 @@ public:
         }
     };
 
-    double computeLogCost(arma::mat y_val);
+    arma::mat computeLogCost(arma::mat y_val);
 
     void showActiveValues();
 
@@ -109,17 +110,24 @@ public:
     void saveBiases(std::string filename);
 };
 
-/*
+
 class NetworkModel
 {
-    Network* net;
     double prediction_limit;
 public:
-    NetworkModel(int layer_count, int* neuron_counts, int* neuron_types, double prediction_limit);
-    void train(arma::mat input_vals, arma::mat output_vals, int epochs, double learning_rate);
+    Network* net;
+    NetworkModel(int layer_count, std::vector<int> neuron_counts, std::vector<int> neuron_types, double prediction_limit = 0.5);
+    NetworkModel(std::string filename);
+
+    arma::mat train(arma::mat input_vals, arma::mat output_vals, int epochs, double learning_rate, bool verbose=false);
+    std::tuple<arma::mat, double> test(arma::mat input_vals, arma::mat output_vals);
+    arma::mat predictSingleFeature(arma::mat input_vals);
+    arma::umat predictMultipleFeature(arma::mat input_vals);
+
+    void save(std::string directory);
 
     ~NetworkModel();
     
 };
-*/
+
 #endif
